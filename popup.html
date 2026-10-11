@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --blue: #4078ff; --violet: #9646ff;
+    --grad: linear-gradient(135deg, var(--blue), var(--violet));
+    --bg: #ffffff; --card: #f3f2fb; --text: #1d1b2e; --muted: #7a7795; --track: #dcd9ef;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #17162a; --card: #221f3b; --text: #eeedf7; --muted: #9a97b8; --track: #34305a; }
+  }
+  body { width: 300px; margin: 0; background: var(--bg); color: var(--text); font: 13px system-ui, sans-serif; }
+
+  header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--grad); color: #fff; }
+  header img { width: 28px; height: 28px; border-radius: 7px; box-shadow: 0 0 0 1.5px #fff6; }
+  header .brand { font-weight: 700; font-size: 14px; }
+  header .tab { font-size: 11.5px; opacity: .85; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 230px; }
+
+  main { padding: 14px; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .pct { min-width: 46px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px;
+         background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  input[type=range] { --p: 50%; flex: 1; height: 28px; margin: 0; cursor: pointer; appearance: none; background: none; }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 8px; border-radius: 4px;
+    background:
+      linear-gradient(to right, transparent calc(50% - 1px), #fff9 calc(50% - 1px), #fff9 calc(50% + 1px), transparent calc(50% + 1px)),
+      linear-gradient(to right, var(--blue), var(--violet)) 0 / var(--p) 100% no-repeat,
+      var(--track);
+  }
+  input[type=range]::-webkit-slider-thumb {
+    appearance: none; width: 20px; height: 20px; margin-top: -6px; border-radius: 50%;
+    background: #fff; border: 3px solid var(--violet); box-shadow: 0 2px 6px #4a2c9955;
+  }
+
+  .presets { display: flex; gap: 5px; margin: 12px 0 8px; }
+  button { flex: 1; padding: 5px 0; border: 0; border-radius: 999px; background: var(--card); color: var(--text);
+           cursor: pointer; font: inherit; font-weight: 600; font-size: 12px; transition: background .15s, color .15s; }
+  button:hover:not(:disabled) { background: var(--grad); color: #fff; }
+  button:disabled { opacity: .45; cursor: default; }
+  #reset { width: 100%; }
+
+  .status { color: var(--muted); font-size: 12px; margin-top: 8px; min-height: 1em; }
+  .error { color: #e5487a; }
+  h2 { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 14px 0 8px; }
+  .other { background: var(--card); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; }
+  .other .name { font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .other .pct { font-size: 13px; }
+  .other button { flex: none; padding: 3px 10px; background: var(--bg); }
+</style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon32.png" alt="">
+    <div>
+      <div class="brand">Hush</div>
+      <div id="title" class="tab"></div>
+    </div>
+  </header>
+  <main>
+    <div class="row">
+      <input id="slider" type="range" min="0" max="200" step="1" value="100">
+      <span id="pct" class="pct">100%</span>
+    </div>
+    <div class="presets">
+      <button data-v="0">Mute</button>
+      <button data-v="25">25%</button>
+      <button data-v="50">50%</button>
+      <button data-v="75">75%</button>
+      <button data-v="100">100%</button>
+    </div>
+    <button id="reset">Stop controlling this tab</button>
+    <div id="status" class="status"></div>
+    <div id="others"></div>
+  </main>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
