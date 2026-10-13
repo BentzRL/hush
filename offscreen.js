@@ -1,7 +1,7 @@
 // Each controlled tab: its captured audio -> gain node -> speakers.
-const tabs = new Map(); // tabId -> { stream, ctx, node, gain, title }
+const tabs = new Map(); // tabId -> { stream, ctx, node, gain, title, host }
 
-async function start({ tabId, streamId, gain, title }) {
+async function start({ tabId, streamId, gain, title, host }) {
   if (tabs.has(tabId)) return setGain(tabId, gain);
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { mandatory: { chromeMediaSource: 'tab', chromeMediaSourceId: streamId } },
@@ -15,7 +15,7 @@ async function start({ tabId, streamId, gain, title }) {
     stop(tabId);
     chrome.runtime.sendMessage({ to: 'background', type: 'ended', tabId });
   });
-  tabs.set(tabId, { stream, ctx, node, gain, title });
+  tabs.set(tabId, { stream, ctx, node, gain, title, host });
 }
 
 function setGain(tabId, gain) {
@@ -34,7 +34,7 @@ function stop(tabId) {
 }
 
 function list() {
-  return Object.fromEntries([...tabs].map(([id, t]) => [id, { gain: t.gain, title: t.title }]));
+  return Object.fromEntries([...tabs].map(([id, t]) => [id, { gain: t.gain, title: t.title, host: t.host }]));
 }
 
 async function handle(msg) {

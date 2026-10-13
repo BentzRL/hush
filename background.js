@@ -25,18 +25,32 @@ function setBadge(tabId, gain) {
 
 chrome.action.setBadgeBackgroundColor({ color: '#6a5cff' });
 
-async function handle(msg) {
-  if (msg.type === 'ended') return setBadge(msg.tabId, null);
+// Pages apply the saved site level themselves unless the tab is captured, so tell them.
+function setCaptured(tabId, on) {
+  chrome.tabs.sendMessage(tabId, { type: 'captured', on }).catch(() => {}); // page may have no content script
+}
+
+async function handle(msg, sender) {
+  if (msg.type === 'ended') {
+    setBadge(msg.tabId, null);
+    return setCaptured(msg.tabId, false);
+  }
+  if (msg.type === 'captured?') {
+    if (!(await hasOffscreen())) return { captured: false };
+    const { tabs } = await chrome.runtime.sendMessage({ to: 'offscreen', type: 'get' });
+    return { captured: !!tabs[sender.tab?.id] };
+  }
   if (msg.type !== 'start' && !(await hasOffscreen())) return { tabs: {} };
   await ensureOffscreen();
   const res = await chrome.runtime.sendMessage({ ...msg, to: 'offscreen' });
   if (res?.tabs && msg.tabId != null) setBadge(msg.tabId, res.tabs[msg.tabId]?.gain);
+  if (msg.type === 'start' || msg.type === 'stop') setCaptured(msg.tabId, msg.type === 'start');
   return res;
 }
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.to !== 'background') return;
-  handle(msg).then(sendResponse, (err) => sendResponse({ error: err.message }));
+  handle(msg, sender).then(sendResponse, (err) => sendResponse({ error: err.message }));
   return true;
 });
 

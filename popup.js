@@ -1,6 +1,20 @@
 const $ = (s) => document.querySelector(s);
 const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-let controlled = {}; // tabId -> { gain, title }
+let controlled = {}; // tabId -> { gain, title, host }
+
+// Levels are remembered per site (www. ignored); content.js applies them when pages load.
+const hostOf = (url) => {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
+};
+const host = hostOf(tab.url);
+let { levels = {} } = await chrome.storage.local.get('levels');
+
+function saveLevel(site, gain) {
+  if (!site) return;
+  if (gain === 1) delete levels[site];
+  else levels[site] = gain;
+  chrome.storage.local.set({ levels });
+}
 
 // Snap to 100% when dragged close to the middle, so normal volume is easy to hit.
 const snap = (v) => (Math.abs(v - 100) <= 4 ? 100 : Number(v));
@@ -23,12 +37,15 @@ function showStatus(text, isError = false) {
 
 function renderCurrent() {
   const mine = controlled[tab.id];
-  const pct = mine ? Math.round(mine.gain * 100) : 100;
+  const saved = levels[host];
+  const pct = Math.round((mine?.gain ?? saved ?? 1) * 100);
   $('#slider').value = pct;
   paint($('#slider'));
   $('#pct').textContent = pct + '%';
-  $('#reset').disabled = !mine;
-  if (!$('#status').classList.contains('error')) showStatus(mine ? '' : 'Normal volume. Move the slider to adjust.');
+  $('#reset').disabled = !mine && saved == null;
+  if ($('#status').classList.contains('error')) return;
+  if (saved != null) showStatus(`Remembered for ${host}`);
+  else showStatus(mine ? '' : 'Normal volume. Move the slider to adjust.');
 }
 
 function renderOthers() {
@@ -53,6 +70,7 @@ function renderOthers() {
       slider.value = snap(slider.value);
       pct.textContent = slider.value + '%';
       send({ type: 'set', tabId, gain: slider.value / 100 });
+      saveLevel(t.host, slider.value / 100);
     };
     el.querySelector('button').onclick = async () => {
       await send({ type: 'stop', tabId });
@@ -78,8 +96,9 @@ async function setCurrent(pct) {
         await send({ type: 'set', tabId: tab.id, gain });
       } else {
         const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
-        await send({ type: 'start', tabId: tab.id, streamId, gain, title: tab.title });
+        await send({ type: 'start', tabId: tab.id, streamId, gain, title: tab.title, host });
       }
+      saveLevel(host, gain);
     } while (latest !== gain);
     showStatus('');
   } catch (err) {
@@ -105,6 +124,7 @@ document.addEventListener('wheel', (e) => {
 }, { passive: false });
 for (const b of document.querySelectorAll('.presets button')) b.onclick = () => setCurrent(Number(b.dataset.v));
 $('#reset').onclick = async () => {
+  saveLevel(host, 1);
   await send({ type: 'stop', tabId: tab.id });
   renderCurrent();
 };
